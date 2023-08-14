@@ -6,15 +6,15 @@ contract CappedSet {
     struct Element {
         address addr;
         uint256 value;
-        uint256 next;   //index of next element.
+        uint256 next; //index of next element.
     }
 
-    uint256 constant private NULL_INDEX = 0;
+    uint256 private constant NULL_INDEX = 0;
     uint256 private HEAD_INDEX = 0;
 
-    uint256 private numElements;    //element count.
-    uint256 private lastIndex;     
-    uint256 private maxElements;    //max element count.
+    uint256 private numElements; //element count.
+    uint256 private lastIndex;
+    uint256 private maxElements; //max element count.
     mapping(uint256 => Element) private elements;
 
     event lowestElement(address addr, uint256 value);
@@ -43,30 +43,36 @@ contract CappedSet {
 
         uint256 prevAddrIndex = findPrevIndex(_addr);
         // If address exist, update value
-        if(elements[prevAddrIndex].next != NULL_INDEX || (prevAddrIndex == 0 && elements[HEAD_INDEX].addr == _addr)) {
-            (address lowestAddr, uint256 lowestValue)=update(_addr, _value);
+        if (
+            elements[prevAddrIndex].next != NULL_INDEX ||
+            (prevAddrIndex == 0 && elements[HEAD_INDEX].addr == _addr)
+        ) {
+            (address lowestAddr, uint256 lowestValue) = update(_addr, _value);
             return (lowestAddr, lowestValue);
         }
         uint256 prevIndex = findPrevIndex(_value);
         uint256 newIndex = ++lastIndex;
         numElements++;
         // If there isn't any element (HEAD_INDEX == 0), or new value is same with value of HEADINDEX
-        if(prevIndex == 0) {
+        if (prevIndex == 0) {
             elements[newIndex] = Element(_addr, _value, HEAD_INDEX);
             HEAD_INDEX = newIndex;
         } else {
             elements[newIndex] = Element(_addr, _value, elements[prevIndex].next);
             elements[prevIndex].next = newIndex;
-        } 
+        }
         // If the element count reaches maxCount, remove lowest one.
         if (numElements > maxElements) {
             HEAD_INDEX = elements[HEAD_INDEX].next;
             numElements--;
         }
         emit lowestElement(elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
-        return (elements[HEAD_INDEX].next == NULL_INDEX) ? 
-        (address(0), 0) : (elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
+        return
+            (elements[HEAD_INDEX].next == NULL_INDEX)
+                ? (address(0), 0)
+                : (elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
     }
+
     /**
      * @dev Function to update the value of an existing element.
      * @param _addr The address of the element.
@@ -78,27 +84,29 @@ contract CappedSet {
         require(_newVal > 0, "Value must be greater than zero");
 
         uint256 prevIndex = findPrevIndex(_addr);
-        if(prevIndex == 0 && numElements > 0) {
+        if (prevIndex == 0 && numElements > 0) {
             elements[HEAD_INDEX].value = _newVal;
         } else {
-            require(elements[prevIndex].next != NULL_INDEX,"Element doesn't exist");
+            require(elements[prevIndex].next != NULL_INDEX, "Element doesn't exist");
             uint256 prevValIndex = findPrevIndex(_newVal);
             uint256 currentIndex = elements[prevIndex].next;
             elements[currentIndex].value = _newVal;
-            if(prevValIndex == 0) {
-                    HEAD_INDEX = currentIndex;
-                    elements[currentIndex].next = HEAD_INDEX;
-            }
-            //if new Value bigger or smaller than previous element value.
-            else if((elements[currentIndex].next != NULL_INDEX && _newVal > elements[elements[currentIndex].next].value) ||
-            _newVal < elements[prevIndex].value ) {
-                elements[prevIndex].next=elements[currentIndex].next; //link previous element and next element.
+            if (prevValIndex == 0) {
+                HEAD_INDEX = currentIndex;
+                elements[currentIndex].next = HEAD_INDEX;
+            } else if (
+                (elements[currentIndex].next != NULL_INDEX &&
+                    _newVal > elements[elements[currentIndex].next].value) ||
+                _newVal < elements[prevIndex].value
+            ) {
+                //if new Value bigger or smaller than previous element value.
+                elements[prevIndex].next = elements[currentIndex].next; //link previous element and next element.
                 elements[currentIndex].next = elements[prevValIndex].next; // update nextIndex.
                 elements[prevValIndex].next = currentIndex; //link preValElement to current element.
             }
         }
         emit lowestElement(elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
-        return  (elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
+        return (elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
     }
 
     /**
@@ -109,10 +117,10 @@ contract CappedSet {
     function remove(address _addr) public returns (address, uint256) {
         require(_addr != address(0), "Address cannot be zero");
         uint256 prevIndex = findPrevIndex(_addr);
-        if(prevIndex == 0 && numElements > 0) {
+        if (prevIndex == 0 && numElements > 0) {
             HEAD_INDEX = elements[HEAD_INDEX].next;
         } else {
-            require(elements[prevIndex].next != NULL_INDEX, "Element doesn't exist"); 
+            require(elements[prevIndex].next != NULL_INDEX, "Element doesn't exist");
             elements[prevIndex].next = elements[elements[prevIndex].next].next;
         }
         --numElements;
@@ -126,7 +134,7 @@ contract CappedSet {
      * @return The value of the element.
      */
     function getValue(address _addr) public view returns (uint256) {
-        if(elements[HEAD_INDEX].addr == _addr) return elements[HEAD_INDEX].value;
+        if (elements[HEAD_INDEX].addr == _addr) return elements[HEAD_INDEX].value;
         uint256 currentIndex = elements[HEAD_INDEX].next;
 
         while (currentIndex != NULL_INDEX) {
@@ -145,10 +153,13 @@ contract CappedSet {
      * @return The previous index of the element.
      */
     function findPrevIndex(uint256 _value) private view returns (uint256) {
-        if(_value <= elements[HEAD_INDEX].value) return 0;
+        if (_value <= elements[HEAD_INDEX].value) return 0;
         uint256 prevIndex = HEAD_INDEX;
 
-        while (elements[prevIndex].next != NULL_INDEX && elements[elements[prevIndex].next].value < _value) {
+        while (
+            elements[prevIndex].next != NULL_INDEX &&
+            elements[elements[prevIndex].next].value < _value
+        ) {
             prevIndex = elements[prevIndex].next;
         }
         return prevIndex;
@@ -160,10 +171,13 @@ contract CappedSet {
      * @return The previous index of the element.
      */
     function findPrevIndex(address _addr) private view returns (uint256) {
-        if(elements[HEAD_INDEX].addr == _addr) return 0;
+        if (elements[HEAD_INDEX].addr == _addr) return 0;
         uint256 prevIndex = HEAD_INDEX;
 
-        while (elements[prevIndex].next != NULL_INDEX && elements[elements[prevIndex].next].addr != _addr) {
+        while (
+            elements[prevIndex].next != NULL_INDEX &&
+            elements[elements[prevIndex].next].addr != _addr
+        ) {
             prevIndex = elements[prevIndex].next;
         }
         return prevIndex;
