@@ -84,12 +84,12 @@ contract CappedSet {
         require(_newVal > 0, "Value must be greater than zero");
 
         uint256 prevIndex = findPrevIndex(_addr);
+        uint256 currentIndex = elements[prevIndex].next;
         if (prevIndex == 0 && numElements > 0) {
             elements[HEAD_INDEX].value = _newVal;
         } else {
             require(elements[prevIndex].next != NULL_INDEX, "Element doesn't exist");
             uint256 prevValIndex = findPrevIndex(_newVal);
-            uint256 currentIndex = elements[prevIndex].next;
             elements[currentIndex].value = _newVal;
             if (prevValIndex == 0) {
                 HEAD_INDEX = currentIndex;
