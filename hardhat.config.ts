@@ -29,11 +29,6 @@ const config: HardhatUserConfig = {
       url: `https://rpc-mumbai.maticvigil.com`, 
       accounts: [PRIVATE_KEY]
     }
-    
-    // sepolia: {
-    //   url: `https://sepolia.infura.io/v3/${INFURA_API_KEY}`, 
-    //   accounts: [PRIVATE_KEY]
-    // }
   },
     etherscan: {
       apiKey: ETHERSCAN_API_KEY,
