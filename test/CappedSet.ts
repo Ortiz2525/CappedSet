@@ -198,7 +198,7 @@ describe('Remove', () => {
         await cappedSet.remove(addr[0].getAddress());
         const value = await cappedSet.getValue(addr[1].getAddress());
         await expect(value).to.be.equal(200);
-        await expect(cappedSet.getValue(addr[0].getAddress())).to.be.revertedWith("Element does not exist");
+        await expect(cappedSet.getValue(addr[0].getAddress())).to.be.revertedWith("Element doesn't exist");
     });
 
     it('should handle removing a non-head element', async () => {
@@ -210,7 +210,7 @@ describe('Remove', () => {
         await cappedSet.remove(addr[2].getAddress());
         const value = await cappedSet.getValue(addr[3].getAddress());
         await expect(value).to.be.equal(400);
-        await expect(cappedSet.getValue(addr[2].getAddress())).to.be.revertedWith("Element does not exist");
+        await expect(cappedSet.getValue(addr[2].getAddress())).to.be.revertedWith("Element doesn't exist");
     });
 
     it('should handle removing a last element', async () => {
@@ -222,7 +222,7 @@ describe('Remove', () => {
         await expect(cappedSet.remove(addr[4].getAddress()))
             .to.emit(cappedSet, "lowestElement")
             .withArgs(await addr[0].getAddress(), 100);
-        await expect(cappedSet.getValue(addr[4].getAddress())).to.be.revertedWith("Element does not exist");
+        await expect(cappedSet.getValue(addr[4].getAddress())).to.be.revertedWith("Element doesn't exist");
     });
 
     it('should handle removing all element', async () => {
@@ -238,6 +238,7 @@ describe('Remove', () => {
             .withArgs(zeroAddress, 0);
     });
 });
+
 describe('Revert cases', () => {
     it('should revert when trying to update a non-existing element', async () => {
         await expect(cappedSet.update(addr[0].getAddress(), 50)).to.be.revertedWith("Element doesn't exist");
@@ -248,7 +249,7 @@ describe('Revert cases', () => {
     });
 
     it('should revert when trying to get the value of a non-existing element', async () => {
-        await expect(cappedSet.getValue(addr[0].getAddress())).to.be.revertedWith("Element does not exist");
+        await expect(cappedSet.getValue(addr[0].getAddress())).to.be.revertedWith("Element doesn't exist");
     });
 
     it('should revert when trying to insert 0 value', async () => {
@@ -271,4 +272,38 @@ describe('Revert cases', () => {
         await expect(cappedSet.remove(zeroAddress)).to.be.revertedWith("Address cannot be zero");
     });
 
+});
+
+describe('multiple using insert update remove', () => {
+    it("multiple using (1)", async () => {
+        await cappedSet.insert(addr[0].getAddress(), 1000);
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 500);
+        await expect(cappedSet.update(addr[1].getAddress(), 50))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[1].getAddress(), 50);
+        await expect(cappedSet.insert(addr[2].getAddress(), 10))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[2].getAddress(), 10);
+    });
+    it("multiple using (2)", async () => {
+        await cappedSet.insert(addr[0].getAddress(), 1000);
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.update(addr[0].getAddress(), 50);
+        await cappedSet.insert(addr[1].getAddress(), 80);
+        await cappedSet.insert(addr[2].getAddress(), 55);
+        await cappedSet.insert(addr[3].getAddress(), 500);
+        await cappedSet.insert(addr[2].getAddress(), 500);
+        await cappedSet.update(addr[0].getAddress(), 40);
+        await cappedSet.update(addr[3].getAddress(), 30);
+        await cappedSet.insert(addr[5].getAddress(), 500);
+        await cappedSet.remove(addr[3].getAddress());
+        await cappedSet.insert(addr[4].getAddress(), 500);
+        await expect(cappedSet.remove(addr[0].getAddress()))
+        .to.emit(cappedSet, "lowestElement")
+        .withArgs(await addr[1].getAddress(), 80);
+        await expect(cappedSet.remove(addr[0].getAddress())).to.be.revertedWith("Element doesn't exist");
+        await expect(cappedSet.remove(addr[3].getAddress())).to.be.revertedWith("Element doesn't exist");
+        await expect(cappedSet.getValue(addr[3].getAddress())).to.be.revertedWith("Element doesn't exist");
+    });
 });

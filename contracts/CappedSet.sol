@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+import "hardhat/console.sol";
 
 contract CappedSet {
     struct Element {
@@ -39,7 +40,6 @@ contract CappedSet {
     function insert(address _addr, uint256 _value) public returns (address, uint256) {
         require(_addr != address(0), "Address cannot be zero");
         require(_value > 0, "Value must be greater than zero");
-
         uint256 prevAddrIndex = findPrevIndex(_addr);
         // If _addr exist in elements, update it's value.
         // elements[prevAddrIndex].next != NULL_INDEX means prevIndex of element exist, so _addr exist in elements.
@@ -51,6 +51,7 @@ contract CappedSet {
         uint256 prevIndex = findPrevIndex(_value);
         uint256 newIndex = ++lastIndex;
         numElements++;
+
         // If there isn't any element (HEAD_INDEX == 0) or new value is same with value of HEADINDEX,
         // should set new Index to HEAD_INDEX.
         if (prevIndex == 0) {
@@ -60,6 +61,7 @@ contract CappedSet {
             elements[newIndex] = Element(_addr, _value, elements[prevIndex].next);
             elements[prevIndex].next = newIndex;
         }
+        
         // If the element count reaches maxCount, remove lowest one.
         if (numElements > maxElements) {
             HEAD_INDEX = elements[HEAD_INDEX].next;
@@ -89,17 +91,18 @@ contract CappedSet {
             elements[HEAD_INDEX].value = _newVal;
         } else {
             require(elements[prevIndex].next != NULL_INDEX, "Element doesn't exist");
-
             //find location of _newVal.
             uint256 prevValIndex = findPrevIndex(_newVal); //prev index of location of _newVal.
             elements[currentIndex].value = _newVal;
             if (prevValIndex == 0) {
-                //if _newVal is same with or smaller than value of HEAD element
-                HEAD_INDEX = currentIndex;
+                //_newVal is same with or smaller than value of HEAD element   
+                 elements[prevIndex].next = elements[currentIndex].next; // update nextIndex of prev index element.    
                 elements[currentIndex].next = HEAD_INDEX;
+                HEAD_INDEX = currentIndex;
             } else if (
                 (elements[currentIndex].next != NULL_INDEX &&
                     _newVal > elements[elements[currentIndex].next].value) ||
+                elements[currentIndex].next == NULL_INDEX ||
                 _newVal < elements[prevIndex].value
             ) {
                 //if new _newVal smaller than value of previous element or greater tahn value of next element
@@ -150,7 +153,7 @@ contract CappedSet {
             currentIndex = elements[currentIndex].next;
         }
 
-        revert("Element does not exist");
+        revert("Element doesn't exist");
     }
 
     /**
