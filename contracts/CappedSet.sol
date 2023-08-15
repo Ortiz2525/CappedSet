@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "hardhat/console.sol";
 
 contract CappedSet {
     struct Element {
@@ -42,18 +41,18 @@ contract CappedSet {
         require(_value > 0, "Value must be greater than zero");
 
         uint256 prevAddrIndex = findPrevIndex(_addr);
-        // If address exist, update value
-        if (
-            elements[prevAddrIndex].next != NULL_INDEX ||
-            (prevAddrIndex == 0 && elements[HEAD_INDEX].addr == _addr)
-        ) {
+        // If _addr exist in elements, update it's value.
+        // elements[prevAddrIndex].next != NULL_INDEX means prevIndex of element exist, so _addr exist in elements.
+        // if _addr is same with addr of  HEAD element, prevIndex of head element doesn't exist so should add this case.
+        if (elements[prevAddrIndex].next != NULL_INDEX || (elements[HEAD_INDEX].addr == _addr)) {
             (address lowestAddr, uint256 lowestValue) = update(_addr, _value);
             return (lowestAddr, lowestValue);
         }
         uint256 prevIndex = findPrevIndex(_value);
         uint256 newIndex = ++lastIndex;
         numElements++;
-        // If there isn't any element (HEAD_INDEX == 0), or new value is same with value of HEADINDEX
+        // If there isn't any element (HEAD_INDEX == 0) or new value is same with value of HEADINDEX,
+        // should set new Index to HEAD_INDEX.
         if (prevIndex == 0) {
             elements[newIndex] = Element(_addr, _value, HEAD_INDEX);
             HEAD_INDEX = newIndex;
@@ -85,13 +84,17 @@ contract CappedSet {
 
         uint256 prevIndex = findPrevIndex(_addr);
         uint256 currentIndex = elements[prevIndex].next;
+        //if _addr is same with addr of HEAD element, set HEAD value to _newVal.
         if (prevIndex == 0 && numElements > 0) {
             elements[HEAD_INDEX].value = _newVal;
         } else {
             require(elements[prevIndex].next != NULL_INDEX, "Element doesn't exist");
-            uint256 prevValIndex = findPrevIndex(_newVal);
+
+            //find location of _newVal.
+            uint256 prevValIndex = findPrevIndex(_newVal); //prev index of location of _newVal.
             elements[currentIndex].value = _newVal;
             if (prevValIndex == 0) {
+                //if _newVal is same with or smaller than value of HEAD element
                 HEAD_INDEX = currentIndex;
                 elements[currentIndex].next = HEAD_INDEX;
             } else if (
@@ -99,11 +102,12 @@ contract CappedSet {
                     _newVal > elements[elements[currentIndex].next].value) ||
                 _newVal < elements[prevIndex].value
             ) {
-                //if new Value bigger or smaller than previous element value.
-                elements[prevIndex].next = elements[currentIndex].next; //link previous element and next element.
-                elements[currentIndex].next = elements[prevValIndex].next; // update nextIndex.
-                elements[prevValIndex].next = currentIndex; //link preValElement to current element.
+                //if new _newVal smaller than value of previous element or greater tahn value of next element
+                elements[prevIndex].next = elements[currentIndex].next; //link the previous and next elements of the old currentIndex element
+                elements[currentIndex].next = elements[prevValIndex].next; // update nextIndex of currentIndex element
+                elements[prevValIndex].next = currentIndex; //link preValIndex element to new currentIndex element.
             }
+            // In other cases, location of currentIndex element same with previous location.
         }
         emit lowestElement(elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
         return (elements[HEAD_INDEX].addr, elements[HEAD_INDEX].value);
@@ -117,6 +121,8 @@ contract CappedSet {
     function remove(address _addr) public returns (address, uint256) {
         require(_addr != address(0), "Address cannot be zero");
         uint256 prevIndex = findPrevIndex(_addr);
+
+        //if _addr is same with addr of HEAD element, set HEAD to next element.
         if (prevIndex == 0 && numElements > 0) {
             HEAD_INDEX = elements[HEAD_INDEX].next;
         } else {

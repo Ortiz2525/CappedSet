@@ -12,15 +12,15 @@ describe('YourContract', () => {
         await expect(CappedSet.deploy(0)).to.be.revertedWith('Max elements must be greater than zero');
     });
 });
-describe('CappedSet', () => {
-    beforeEach(async () => {
-        addr = await ethers.getSigners();
-        const CappedSet = await ethers.getContractFactory('CappedSet');
-        cappedSet = await CappedSet.deploy(10);
-        await cappedSet.deployed();
-        zeroAddress = utils.getAddress('0x0000000000000000000000000000000000000000');
-    });
+beforeEach(async () => {
+    addr = await ethers.getSigners();
+    const CappedSet = await ethers.getContractFactory('CappedSet');
+    cappedSet = await CappedSet.deploy(10);
+    await cappedSet.deployed();
+    zeroAddress = utils.getAddress('0x0000000000000000000000000000000000000000');
+});
 
+describe('insert, update, remove only one element', () => {
     it('should insert one new element', async () => {
         await expect(cappedSet.insert(addr[0].getAddress(), 100))
             .to.emit(cappedSet, "lowestElement")
@@ -46,8 +46,9 @@ describe('CappedSet', () => {
         const value = await cappedSet.getValue(addr[0].getAddress());
         await expect(value).to.be.equal(100);
     });
-
-    it('should handle inserting an existing element by updating its value', async () => {
+});
+describe('Insert', () => {
+    it('should handle inserting an existing element by updating largest value', async () => {
         await cappedSet.insert(addr[0].getAddress(), 100);
         await cappedSet.insert(addr[1].getAddress(), 200);
         await cappedSet.insert(addr[2].getAddress(), 300);
@@ -67,6 +68,32 @@ describe('CappedSet', () => {
         await cappedSet.insert(addr[5].getAddress(), 100);
         const value = await cappedSet.getValue(addr[5].getAddress());
         await expect(value).to.be.equal(100);
+    });
+    it('should handle inserting an element with the smallest value', async () => {
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 200);
+        await cappedSet.insert(addr[2].getAddress(), 300);
+        await cappedSet.insert(addr[3].getAddress(), 400);
+        await cappedSet.insert(addr[4].getAddress(), 500);
+        await expect(cappedSet.insert(addr[5].getAddress(), 50))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[5].getAddress(), 50);
+        const value = await cappedSet.getValue(addr[5].getAddress());
+        await expect(value).to.be.equal(50);
+    });
+
+
+    it('should handle inserting an element with the middle value', async () => {
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 200);
+        await cappedSet.insert(addr[2].getAddress(), 300);
+        await cappedSet.insert(addr[3].getAddress(), 400);
+        await cappedSet.insert(addr[4].getAddress(), 500);
+        await expect(cappedSet.insert(addr[5].getAddress(), 250))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[0].getAddress(), 100);
+        const value = await cappedSet.getValue(addr[5].getAddress());
+        await expect(value).to.be.equal(250);
     });
 
     it('should handle inserting an existed element', async () => {
@@ -89,6 +116,32 @@ describe('CappedSet', () => {
         await cappedSet.insert(addr[5].getAddress(), 600);
         const value = await cappedSet.getValue(addr[5].getAddress());
         await expect(value).to.be.equal(600);
+    });
+    it('should insert more than max count and remove lowest', async () => {
+        for (let i = 0; i < 13; i++) await cappedSet.insert(addr[i].getAddress(), 100 * i + 100);
+    });
+});
+describe('Update', () => {
+    it("should handle updating an middle element a value smaller than head element", async () => {
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 200);
+        await cappedSet.insert(addr[2].getAddress(), 300);
+        await cappedSet.insert(addr[3].getAddress(), 400);
+        await cappedSet.insert(addr[4].getAddress(), 500);
+        await expect(cappedSet.update(addr[4].getAddress(), 50))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[4].getAddress(), 50);
+    });
+
+    it("should handle updating an middle element a value same with head element", async () => {
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 200);
+        await cappedSet.insert(addr[2].getAddress(), 300);
+        await cappedSet.insert(addr[3].getAddress(), 400);
+        await cappedSet.insert(addr[4].getAddress(), 500);
+        await expect(cappedSet.update(addr[4].getAddress(), 100))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[4].getAddress(), 100);
     });
 
     it("should handle updating an middle element a value greater than largest value", async () => {
@@ -134,7 +187,8 @@ describe('CappedSet', () => {
         const value = await cappedSet.getValue(addr[3].getAddress());
         await expect(value).to.be.equal(50);
     });
-
+});
+describe('Remove', () => {
     it('should handle removing the head element', async () => {
         await cappedSet.insert(addr[0].getAddress(), 100);
         await cappedSet.insert(addr[1].getAddress(), 200);
@@ -144,6 +198,7 @@ describe('CappedSet', () => {
         await cappedSet.remove(addr[0].getAddress());
         const value = await cappedSet.getValue(addr[1].getAddress());
         await expect(value).to.be.equal(200);
+        await expect(cappedSet.getValue(addr[0].getAddress())).to.be.revertedWith("Element does not exist");
     });
 
     it('should handle removing a non-head element', async () => {
@@ -155,8 +210,35 @@ describe('CappedSet', () => {
         await cappedSet.remove(addr[2].getAddress());
         const value = await cappedSet.getValue(addr[3].getAddress());
         await expect(value).to.be.equal(400);
+        await expect(cappedSet.getValue(addr[2].getAddress())).to.be.revertedWith("Element does not exist");
     });
 
+    it('should handle removing a last element', async () => {
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 200);
+        await cappedSet.insert(addr[2].getAddress(), 300);
+        await cappedSet.insert(addr[3].getAddress(), 400);
+        await cappedSet.insert(addr[4].getAddress(), 500);
+        await expect(cappedSet.remove(addr[4].getAddress()))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(await addr[0].getAddress(), 100);
+        await expect(cappedSet.getValue(addr[4].getAddress())).to.be.revertedWith("Element does not exist");
+    });
+
+    it('should handle removing all element', async () => {
+        await cappedSet.insert(addr[0].getAddress(), 100);
+        await cappedSet.insert(addr[1].getAddress(), 200);
+        await cappedSet.insert(addr[2].getAddress(), 300);
+        await cappedSet.insert(addr[3].getAddress(), 400);
+        await cappedSet.remove(addr[0].getAddress());
+        await cappedSet.remove(addr[1].getAddress());
+        await cappedSet.remove(addr[3].getAddress());
+        await expect(cappedSet.remove(addr[2].getAddress()))
+            .to.emit(cappedSet, "lowestElement")
+            .withArgs(zeroAddress, 0);
+    });
+});
+describe('Revert cases', () => {
     it('should revert when trying to update a non-existing element', async () => {
         await expect(cappedSet.update(addr[0].getAddress(), 50)).to.be.revertedWith("Element doesn't exist");
     });
@@ -187,10 +269,6 @@ describe('CappedSet', () => {
 
     it('should revert when trying to remove zeroAddress', async () => {
         await expect(cappedSet.remove(zeroAddress)).to.be.revertedWith("Address cannot be zero");
-    });
-
-    it('should insert more than max count and remove lowest', async () => {
-        for (let i = 0; i < 13; i++) await cappedSet.insert(addr[i].getAddress(), 100 * i + 100);
     });
 
 });
