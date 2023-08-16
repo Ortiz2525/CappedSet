@@ -1,1 +1,0 @@
-module.exports = ["100000", "MyToken", "MTK"]
